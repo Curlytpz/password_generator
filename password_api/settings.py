@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
+from datetime import timedelta
 
 from pathlib import Path
 
@@ -39,6 +40,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'generator',
+    'password_api',
+    'django_extensions',
+    'rest_framework_simplejwt',
 ]
 
 MIDDLEWARE = [
@@ -82,6 +86,20 @@ DATABASES = {
     }
 }
 
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=60),  # Access token will expire in 7 days
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=70),  # Refresh token will expire in 30 days
+    'ROTATE_REFRESH_TOKENS': False,  # Optional: Set to True if you want to rotate refresh tokens on refresh
+    'BLACKLIST_AFTER_ROTATION': True,  # Optional: Blacklist old refresh tokens after they are rotated
+    'ALGORITHM': 'HS256',  # The algorithm used to sign the tokens
+    'SIGNING_KEY': 'your-secret-key',  # Replace with your secret key
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),  # Accept "Bearer" token type in headers
+    'USER_ID_FIELD': 'id',  # User identifier field
+    'USER_ID_CLAIM': 'user_id',  # User ID claim name in the token
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
