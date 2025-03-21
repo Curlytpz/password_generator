@@ -1,85 +1,104 @@
+import requests
 import hashlib
-import bcrypt
+import math
 import random
 import string
-import time
 
 class PasswordService:
-
     @staticmethod
     def check_strength(password):
-        if len(password) < 6:
+        if len(password) < 8:
             return "Weak"
-        elif len(password) < 10:
+        elif len(password) < 12:
             return "Medium"
-        return "Strong"
+        else:
+            return "Strong"
 
     @staticmethod
     def check_common(password):
-        common_passwords = {"password", "123456", "qwerty", "abc123"}
+        common_passwords = ["password", "123456", "qwerty"]
         return password in common_passwords
 
     @staticmethod
     def check_repeated(password):
-        return any(password[i] == password[i+1] for i in range(len(password)-1))
+        for i in range(len(password) - 1):
+            if password[i] == password[i + 1]:
+                return True
+        return False
 
     @staticmethod
     def calculate_entropy(password):
-        unique_chars = len(set(password))
-        return len(password) * unique_chars
+        charset_size = 0
+        if any(c.islower() for c in password):
+            charset_size += 26
+        if any(c.isupper() for c in password):
+            charset_size += 26
+        if any(c.isdigit() for c in password):
+            charset_size += 10
+        if any(c in string.punctuation for c in password):
+            charset_size += 32
+        entropy = len(password) * math.log2(charset_size) if charset_size > 0 else 0
+        return entropy
 
     @staticmethod
     def check_leaked(password):
-        # Mock leak check (real implementation should query a database)
-        leaked_passwords = {"password123", "admin", "letmein"}
-        return password in leaked_passwords
+        sha1_password = hashlib.sha1(password.encode()).hexdigest().upper()
+        prefix, suffix = sha1_password[:5], sha1_password[5:]
+        url = f"https://api.pwnedpasswords.com/range/{prefix}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            hashes = [line.split(":")[0] for line in response.text.splitlines()]
+            return suffix in hashes
+        else:
+            raise Exception("Failed to check password leak.")
 
     @staticmethod
     def convert_weak_to_strong(password):
-        return password + "!@#" + str(random.randint(100, 999))
+        if len(password) < 8:
+            return password + "!@#123"
+        return password
 
     @staticmethod
     def estimate_crack_time(password):
-        complexity = len(set(password))
-        return round(2 ** complexity / 1e6, 2)  # Mock formula for time in seconds
+        entropy = PasswordService.calculate_entropy(password)
+        guesses_per_second = 1e9  # Assume 1 billion guesses per second
+        crack_time_seconds = (2 ** entropy) / guesses_per_second
+        return f"{crack_time_seconds} seconds"
 
     @staticmethod
     def generate_passphrase(separator="-"):
         words = ["apple", "banana", "cherry", "delta", "echo", "foxtrot"]
-        return separator.join(random.choices(words, k=4))
+        return separator.join(random.choices(words, k=3))
 
     @staticmethod
     def strength_report(password):
         return {
             "length": len(password),
-            "has_numbers": any(char.isdigit() for char in password),
-            "has_special": any(char in string.punctuation for char in password),
-            "strength": PasswordService.check_strength(password),
+            "has_uppercase": any(c.isupper() for c in password),
+            "has_lowercase": any(c.islower() for c in password),
+            "has_digits": any(c.isdigit() for c in password),
+            "has_special": any(c in string.punctuation for c in password),
         }
 
     @staticmethod
     def password_recovery_reset(data):
-        username = data.get("username")
-        new_password = data.get("password")
-        if username and new_password:
-            return {"message": "Password reset successful"}
-        return {"error": "Invalid data"}
+        # Example implementation
+        return {"message": "Password reset successful"}
 
     @staticmethod
     def hash_password(password):
-        salt = bcrypt.gensalt()
-        return bcrypt.hashpw(password.encode(), salt).decode()
-
-    @staticmethod
-    def validate_hash(password, hashed):
-        return bcrypt.checkpw(password.encode(), hashed.encode())
-
-    @staticmethod
-    def encrypt_password(password):
         return hashlib.sha256(password.encode()).hexdigest()
 
     @staticmethod
-    def check_reuse(password):
-        old_passwords = {"oldpassword1", "mypassword", "securepass"}
-        return password in old_passwords
+    def validate_hash(password, hash_value):
+        return PasswordService.hash_password(password) == hash_value
 
+    @staticmethod
+    def encrypt_password(password):
+        # Example implementation (reverse the password)
+        return password[::-1]
+
+    @staticmethod
+    def check_reuse(password):
+        # Example implementation
+        return False  # Assume password is not reused

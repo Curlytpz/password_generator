@@ -1,15 +1,12 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.http import JsonResponse
 from rest_framework.response import Response
 from .serializers import PasswordSerializer
 from .services import PasswordService
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.permissions import AllowAny
-from rest_framework.decorators import permission_classes
-from rest_framework_simplejwt.views import TokenObtainPairView
 import random
 import string
-import hashlib
 
 
 def home(request):
@@ -26,22 +23,9 @@ def validate_length(value, default=12):
         return None
 
 
-@csrf_exempt
 @api_view(['POST'])
-@permission_classes([AllowAny])
-def password_recovery_reset(request):
-    serializer = PasswordSerializer(data=request.data)
-    if serializer.is_valid():
-        try:
-            result = PasswordService.password_recovery_reset(serializer.validated_data['password'])
-            return Response({'message': result})
-        except Exception as e:
-            # Log the error for better understanding
-            print(f"Error in password recovery reset: {str(e)}")
-            return Response({'error': f'Internal server error: {str(e)}'}, status=500)
-    return Response({'error': serializer.errors}, status=400)
-
-@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def check_strength(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
@@ -51,6 +35,8 @@ def check_strength(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def check_common(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
@@ -60,6 +46,8 @@ def check_common(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def check_repeated(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
@@ -69,6 +57,8 @@ def check_repeated(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def calculate_entropy(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
@@ -78,15 +68,23 @@ def calculate_entropy(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def check_leaked(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
-        is_leaked = PasswordService.check_leaked(serializer.validated_data['password'])
-        return Response({'is_leaked': is_leaked})
+        try:
+            is_leaked = PasswordService.check_leaked(serializer.validated_data['password'])
+            return Response({'is_leaked': is_leaked})
+        except Exception as e:
+            print(f"Error checking password leak: {e}")
+            return Response({'error': 'Failed to check password leak.'}, status=500)
     return Response({'error': serializer.errors}, status=400)
 
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def generate_random_password(request):
     length = validate_length(request.GET.get('length', 12))
     if length is None:
@@ -98,6 +96,8 @@ def generate_random_password(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def generate_custom_password(request):
     length = validate_length(request.data.get('length', 12))
     if length is None:
@@ -123,6 +123,8 @@ def generate_custom_password(request):
 
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def generate_easy_password(request):
     words = ["apple", "banana", "cherry", "delta", "echo", "foxtrot", "golf", "hotel"]
     password = '-'.join(random.choices(words, k=3))
@@ -130,6 +132,8 @@ def generate_easy_password(request):
 
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def generate_exclude_similar_password(request):
     length = validate_length(request.GET.get('length', 12))
     if length is None:
@@ -142,11 +146,15 @@ def generate_exclude_similar_password(request):
 
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def password_expiration_reminder(request):
     return Response({'message': "It's time to update your password for better security!"})
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def convert_weak_to_strong(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
@@ -156,6 +164,8 @@ def convert_weak_to_strong(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def estimate_crack_time(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
@@ -165,12 +175,16 @@ def estimate_crack_time(request):
 
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def generate_passphrase(request):
     passphrase = PasswordService.generate_passphrase()
     return Response({'passphrase': passphrase})
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def generate_passphrase_custom_separator(request):
     separator = request.data.get('separator', '-')
     passphrase = PasswordService.generate_passphrase(separator)
@@ -178,6 +192,8 @@ def generate_passphrase_custom_separator(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def strength_report(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
@@ -187,6 +203,19 @@ def strength_report(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def password_recovery_reset(request):
+    serializer = PasswordSerializer(data=request.data)
+    if serializer.is_valid():
+        result = PasswordService.password_recovery_reset(serializer.validated_data)
+        return Response(result)
+    return Response({'error': serializer.errors}, status=400)
+
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def password_hash(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
@@ -196,22 +225,19 @@ def password_hash(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def validate_hash(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
-       
-        password = serializer.validated_data['password']
-        hash_value = serializer.validated_data['hash']
-        
-      
-        matches = PasswordService.validate_hash(password, hash_value)
-        
+        matches = PasswordService.validate_hash(serializer.validated_data['password'], serializer.validated_data['hash'])
         return Response({'matches': matches})
-    
     return Response({'error': serializer.errors}, status=400)
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def encrypt_password(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
@@ -221,85 +247,11 @@ def encrypt_password(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def check_reuse(request):
     serializer = PasswordSerializer(data=request.data)
     if serializer.is_valid():
         is_reused = PasswordService.check_reuse(serializer.validated_data['password'])
         return Response({'is_reused': is_reused})
     return Response({'error': serializer.errors}, status=400)
-
-class PasswordService:
-    @staticmethod
-    def password_recovery_reset(password):
-        if not password:
-            raise ValueError("Password cannot be empty")
-        # Additional logic for resetting the password
-        return "Password reset successful"
-    
-class PasswordService:
-    # Ensure this is properly indented with 4 spaces
-    @staticmethod
-    def validate_hash(password, hash_value):
-        # Example: Use hashlib to compare the password with the hash
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        
-        if hashed_password == hash_value:
-            return True
-        return False
-
-
-def create_jwt_token(user):
-    # The code inside this function should be indented properly.
-    refresh = RefreshToken.for_user(user)
-    
-    # You can add custom claims to the refresh token here.
-    refresh['role'] = user.role
-    refresh['permissions'] = user.permissions
-    
-    return str(refresh.access_token)
-
-def create_custom_token(user):
-    # Generate refresh token for the user
-    refresh = RefreshToken.for_user(user)
-
-    # Add multiple custom claims to the payload to make it longer
-    refresh.payload['custom_claim_1'] = 'value_for_claim_1'  # Claim 1
-    refresh.payload['custom_claim_2'] = 'value_for_claim_2'  # Claim 2
-    refresh.payload['custom_claim_3'] = 'value_for_claim_3'  # Claim 3
-    refresh.payload['custom_claim_4'] = 'value_for_claim_4'  # Claim 4
-    refresh.payload['custom_claim_5'] = 'value_for_claim_5'  # Claim 5
-    refresh.payload['custom_claim_6'] = 'value_for_claim_6'  # Claim 6
-    refresh.payload['custom_claim_7'] = 'value_for_claim_7'  # Claim 7
-    refresh.payload['custom_claim_8'] = 'value_for_claim_8'  # Claim 8
-    refresh.payload['custom_claim_9'] = 'value_for_claim_9'  # Claim 9
-    refresh.payload['custom_claim_10'] = 'value_for_claim_10'  # Claim 10
-    refresh.payload['custom_claim_11'] = 'value_for_claim_11'  # Claim 11
-    refresh.payload['custom_claim_12'] = 'value_for_claim_12'  # Claim 12
-    refresh.payload['custom_claim_13'] = 'value_for_claim_13'  # Claim 13
-    refresh.payload['custom_claim_14'] = 'value_for_claim_14'  # Claim 14
-    refresh.payload['custom_claim_15'] = 'value_for_claim_15'  # Claim 15
-    refresh.payload['custom_claim_16'] = 'value_for_claim_16'  # Claim 16
-    refresh.payload['custom_claim_17'] = 'value_for_claim_17'  # Claim 17
-    refresh.payload['custom_claim_18'] = 'value_for_claim_18'  # Claim 18
-    refresh.payload['custom_claim_19'] = 'value_for_claim_19'  # Claim 19
-    refresh.payload['custom_claim_20'] = 'value_for_claim_20'  # Claim 20
-
-    # Add enough custom claims to make the token larger than 80 words.
-    refresh.payload['extra_info'] = 'This is additional information to make the token longer.'
-
-    return str(refresh)
-@permission_classes([AllowAny])  # Allows any user to access the endpoint
-class CustomTokenObtainPairView(TokenObtainPairView):
-    def post(self, request, *args, **kwargs):
-        # Perform the original functionality of getting tokens
-        response = super().post(request, *args, **kwargs)
-
-        # If authentication is successful, create a custom token
-        if response.status_code == 200:
-            user = User.objects.get(username=request.data.get('username'))
-            custom_token = create_custom_token(user)
-
-            # Add the custom token to the response
-            response.data['custom_refresh_token'] = custom_token  # Add custom refresh token to the response
-
-        return response
