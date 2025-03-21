@@ -4,7 +4,10 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.http import JsonResponse
 from rest_framework.response import Response
 from .serializers import PasswordSerializer
-from .services import PasswordService
+from .services import PasswordService  # Corrected import
+from django.contrib.auth import get_user_model  # Corrected import
+from rest_framework.views import APIView
+from rest_framework import status
 import random
 import string
 
@@ -255,3 +258,29 @@ def check_reuse(request):
         is_reused = PasswordService.check_reuse(serializer.validated_data['password'])
         return Response({'is_reused': is_reused})
     return Response({'error': serializer.errors}, status=400)
+
+
+User = get_user_model()
+
+class UserRegistrationView(APIView):
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        if not username or not password:
+            return Response(
+                {"error": "Username and password are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {"error": "Username already exists."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = User.objects.create_user(username=username, password=password)
+        return Response(
+            {"message": "User created successfully.", "user_id": user.id},
+            status=status.HTTP_201_CREATED
+        )
